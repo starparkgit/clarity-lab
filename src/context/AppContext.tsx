@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -68,6 +69,8 @@ async function ensureLocalProfile(): Promise<LocalProfile> {
   return profile
 }
 
+const NOTICE_MS = 3200
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false)
   const [user, setUser] = useState<User | null>(null)
@@ -82,29 +85,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
   })
   const [queue, setQueue] = useState(0)
   const [notice, setNotice] = useState<string | null>(null)
+  const userRef = useRef(user)
+  userRef.current = user
+  const refreshGen = useRef(0)
 
   const loadMeta = useCallback(async () => {
     setTopicMeta(await topicBankMeta())
-    setQueue(await queuedCount())
+    const uid = userRef.current?.id
+    setQueue(uid ? await queuedCount(uid) : 0)
   }, [])
 
   const activateProfile = useCallback(async (next: LocalProfile) => {
     setProfile(next)
     await setMeta('activeProfileId', next.id)
-    if (online && user) await pullProfileData(next.id)
-  }, [online, user])
+    if (online && userRef.current) await pullProfileData(next.id)
+  }, [online])
 
   const refreshAll = useCallback(async () => {
-    const uid = user?.id ?? 'local'
+    const gen = ++refreshGen.current
+    const uid = userRef.current?.id ?? 'local'
     let list =
       uid === 'local'
         ? await db.profiles.where('userId').equals('local').toArray()
         : await pullProfiles(uid)
 
-    if (uid !== 'local' && list.length === 0 && online && supabase && user) {
+    if (uid !== 'local' && list.length === 0 && online && supabase && userRef.current) {
       const created: LocalProfile = {
         id: createId(),
-        userId: user.id,
+        userId: userRef.current.id,
         displayName: '기본',
         accent: 'ink',
         editorFontSize: 18,
@@ -129,15 +137,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
       list = [created]
     }
 
+    if (gen !== refreshGen.current) return
     setProfiles(list)
     const savedId = await getMeta<string | null>('activeProfileId', null)
     const current =
       list.find((p) => p.id === savedId) ??
       list[0] ??
       (await ensureLocalProfile())
+    if (gen !== refreshGen.current) return
     if (current) await activateProfile(current)
-    await loadMeta()
-  }, [activateProfile, loadMeta, online, user])
+    if (gen === refreshGen.current) await loadMeta()
+  }, [activateProfile, loadMeta, online])
 
   useEffect(() => {
     let unsub = () => {}
@@ -168,12 +178,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
+    if (!notice) return
+    const timer = window.setTimeout(() => setNotice(null), NOTICE_MS)
+    return () => window.clearTimeout(timer)
+  }, [notice])
+
+  useEffect(() => {
     if (!ready) return
     void refreshAll()
   }, [ready, user, refreshAll])
 
   useEffect(() => {
-    if (!ready || !online) return
+    if (!ready || !online || !user) {
+      setSyncing(false)
+      return
+    }
     let cancelled = false
     ;(async () => {
       setSyncing(true)
@@ -186,15 +205,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     })()
     return () => {
       cancelled = true
+      setSyncing(false)
     }
   }, [ready, online, user, loadMeta])
 
   const chip: NetworkChip = useMemo(() => {
     if (syncing) return 'syncing'
-    if (!online) return queue > 0 ? 'queued' : 'offline'
-    if (queue > 0) return 'queued'
+    if (!online) return queue > 0 && user ? 'queued' : 'offline'
+    if (queue > 0 && user) return 'queued'
     return 'online'
-  }, [online, queue, syncing])
+  }, [online, queue, syncing, user])
 
   const switchProfile = useCallback(
     async (id: string) => {
@@ -290,16 +310,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(
     async (keepLocal: boolean) => {
-      if (!keepLocal && queue > 0 && online) {
+      if (!keepLocal && online) {
         await flushSyncQueue()
       }
+      refreshGen.current += 1
+      userRef.current = null
       await supabase?.auth.signOut()
-      const local = await ensureLocalProfile()
       setUser(null)
-      await activateProfile(local)
-      await refreshAll()
+      const local = await ensureLocalProfile()
+      setProfile(local)
+      await setMeta('activeProfileId', local.id)
+      const locals = await db.profiles.where('userId').equals('local').toArray()
+      setProfiles(locals.length > 0 ? locals : [local])
+      await loadMeta()
     },
-    [activateProfile, online, queue, refreshAll],
+    [loadMeta, online],
   )
 
   const value: AppState = {

@@ -80,8 +80,16 @@ export async function enqueueDocument(d: LocalDocument): Promise<void> {
   await enqueue('documents', documentRow(d))
 }
 
-export async function queuedCount(): Promise<number> {
-  return db.syncQueue.count()
+export async function queuedCount(userId?: string): Promise<number> {
+  if (!userId) return db.syncQueue.count()
+  const items = await db.syncQueue.toArray()
+  return items.filter((item) => item.payload.user_id === userId).length
+}
+
+const TABLE_ORDER: Record<QueueTable, number> = {
+  profiles: 0,
+  sessions: 1,
+  documents: 2,
 }
 
 export async function flushSyncQueue(): Promise<{ ok: boolean; remaining: number }> {
@@ -89,7 +97,16 @@ export async function flushSyncQueue(): Promise<{ ok: boolean; remaining: number
     return { ok: false, remaining: await queuedCount() }
   }
 
-  const items = await db.syncQueue.orderBy('updatedAt').toArray()
+  const { data } = await supabase.auth.getSession()
+  const uid = data.session?.user.id
+  if (!uid) {
+    return { ok: false, remaining: await queuedCount() }
+  }
+
+  const items = (await db.syncQueue.toArray())
+    .filter((item) => item.payload.user_id === uid)
+    .sort((a, b) => TABLE_ORDER[a.table] - TABLE_ORDER[b.table] || a.updatedAt - b.updatedAt)
+
   for (const item of items) {
     const table =
       item.table === 'profiles' ? 'profiles' : item.table === 'sessions' ? 'sessions' : 'documents'
@@ -103,7 +120,7 @@ export async function flushSyncQueue(): Promise<{ ok: boolean; remaining: number
       await db.sessions.update(item.payload.id, { syncState: 'synced' })
     }
   }
-  return { ok: true, remaining: await queuedCount() }
+  return { ok: true, remaining: await queuedCount(uid) }
 }
 
 type RemoteProfile = {
