@@ -131,10 +131,24 @@ export function SettingsPage() {
         </p>
         {user ? (
           <div className="row">
-            <button className="btn" type="button" onClick={() => void signOut(false)}>
+            <button
+              className="btn"
+              type="button"
+              onClick={async () => {
+                await signOut(false)
+                navigate('/auth', { replace: true })
+              }}
+            >
               동기화 후 로그아웃
             </button>
-            <button className="btn ghost" type="button" onClick={() => void signOut(true)}>
+            <button
+              className="btn ghost"
+              type="button"
+              onClick={async () => {
+                await signOut(true)
+                navigate('/auth', { replace: true })
+              }}
+            >
               로컬에 남기고 로그아웃
             </button>
           </div>

@@ -76,9 +76,15 @@ export function HomePage() {
           {recent.length === 0 && <p className="muted">아직 세션이 없습니다. 위 카드에서 시작하세요.</p>}
           <div className="list">
             {recent.map((s) => (
-              <Link key={s.id} to={`/archive/${s.id}`}>
+              <Link
+                key={s.id}
+                to={s.status === 'in_progress' ? `/practice/${s.type}/${s.id}` : `/archive/${s.id}`}
+              >
                 {typeLabel(s.type)} · {s.topic.title}
-                <div className="muted">{formatKoreanDate(s.updatedAt)}</div>
+                <div className="muted">
+                  {s.status === 'in_progress' ? '이어쓰기 · ' : ''}
+                  {formatKoreanDate(s.updatedAt)}
+                </div>
               </Link>
             ))}
           </div>
