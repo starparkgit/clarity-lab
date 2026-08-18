@@ -21,6 +21,9 @@ export function Shell({ children }: { children: ReactNode }) {
           <span>Clarity Lab</span>
         </Link>
         <nav className="topbar-nav">
+          <NavLink to="/" end className="btn ghost">
+            글쓰기
+          </NavLink>
           <NavLink to="/archive" className="btn ghost">
             기록
           </NavLink>

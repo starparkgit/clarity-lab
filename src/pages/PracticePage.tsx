@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { MarkEditor } from '../components/MarkEditor'
 import { Stepper } from '../components/Stepper'
 import { TimerBar } from '../components/TimerBar'
@@ -22,6 +22,7 @@ import {
   upsertDocument,
 } from '../lib/sessions'
 import { applyMarks } from '../lib/marks'
+import { flushSyncQueue } from '../lib/sync'
 import { minuteHint } from '../lib/time'
 import type {
   DebateChecklist,
@@ -67,9 +68,69 @@ export function PracticePage() {
     ended: false,
   })
   const [later, setLater] = useState(false)
+  const [saveEnabled, setSaveEnabled] = useState(false)
+  const [saveLabel, setSaveLabel] = useState<string | null>(null)
 
   const language: WritingLanguage = session?.language ?? profile?.lastWritingLanguage ?? 'ko'
   const [version, setVersion] = useState(1)
+
+  const draftState = {
+    session,
+    version,
+    research,
+    draft,
+    feedback,
+    clean,
+    marks,
+    cards,
+    summary,
+    side,
+    reasons,
+  }
+  const stateRef = useRef(draftState)
+  stateRef.current = draftState
+  const dirtyRef = useRef(false)
+  const hydratedRef = useRef(false)
+  const mountedRef = useRef(true)
+  const persistLock = useRef<Promise<void> | null>(null)
+
+  const persist = useCallback(async () => {
+    const run = async () => {
+      const s = stateRef.current
+      if (!s.session) return
+      try {
+        await upsertDocument({ session: s.session, role: 'researchNotes', version: s.version, text: s.research })
+        await upsertDocument({ session: s.session, role: 'draft', version: s.version, text: s.draft })
+        await upsertDocument({ session: s.session, role: 'feedback', version: s.version, text: s.feedback })
+        await upsertDocument({ session: s.session, role: 'clean', version: s.version, text: s.clean })
+        await upsertDocument({ session: s.session, role: 'annotated', version: s.version, text: s.draft, marks: s.marks })
+        await upsertDocument({ session: s.session, role: 'stanceCards', version: s.version, text: s.cards })
+        await upsertDocument({ session: s.session, role: 'debateSummary', version: s.version, text: s.summary })
+        const patch =
+          s.session.type === 'argument' ? { stance: { side: s.side, reasons: s.reasons } } : {}
+        const next = await touchSession(s.session, patch)
+        stateRef.current = { ...stateRef.current, session: next }
+        if (mountedRef.current) setSession(next)
+        await flushSyncQueue()
+        dirtyRef.current = false
+        if (mountedRef.current) setSaveLabel('저장됨')
+      } catch {
+        dirtyRef.current = true
+        if (mountedRef.current) setSaveLabel('저장하지 못했습니다')
+      }
+    }
+    if (persistLock.current) {
+      try {
+        await persistLock.current
+      } catch {
+        // Previous save failed; continue with the latest draft.
+      }
+    }
+    persistLock.current = run().finally(() => {
+      persistLock.current = null
+    })
+    await persistLock.current
+  }, [])
 
   const load = useCallback(async (sess: LocalSession) => {
     setSession(sess)
@@ -98,30 +159,67 @@ export function PracticePage() {
   }, [])
 
   useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
+
+  useEffect(() => {
+    hydratedRef.current = false
+    setSaveEnabled(false)
     if (!id) {
       setSession(null)
       return
     }
-    void db.sessions.get(id).then((s) => {
-      if (s) void load(s)
+    let cancelled = false
+    void db.sessions.get(id).then(async (s) => {
+      if (!s || cancelled) return
+      await load(s)
+      if (!cancelled) setSaveEnabled(true)
     })
+    return () => {
+      cancelled = true
+    }
   }, [id, load])
 
   useEffect(() => {
-    if (!session) return
+    if (!saveEnabled) return
+    if (!hydratedRef.current) {
+      hydratedRef.current = true
+      return
+    }
+    dirtyRef.current = true
+    setSaveLabel('저장 중…')
     const t = window.setTimeout(() => {
-      void (async () => {
-        await upsertDocument({ session, role: 'researchNotes', version, text: research })
-        await upsertDocument({ session, role: 'draft', version, text: draft })
-        await upsertDocument({ session, role: 'feedback', version, text: feedback })
-        await upsertDocument({ session, role: 'clean', version, text: clean })
-        await upsertDocument({ session, role: 'annotated', version, text: draft, marks })
-        await upsertDocument({ session, role: 'stanceCards', version, text: cards })
-        await upsertDocument({ session, role: 'debateSummary', version, text: summary })
-      })()
-    }, 600)
+      if (dirtyRef.current) void persist()
+    }, 1200)
     return () => window.clearTimeout(t)
-  }, [session, research, draft, feedback, clean, marks, cards, summary, version])
+  }, [saveEnabled, research, draft, feedback, clean, marks, cards, summary, side, reasons, version, persist])
+
+  useEffect(() => {
+    if (!saveEnabled) return
+    const t = window.setInterval(() => {
+      if (dirtyRef.current) void persist()
+    }, 10_000)
+    return () => window.clearInterval(t)
+  }, [saveEnabled, persist])
+
+  useEffect(() => {
+    const saveIfDirty = () => {
+      if (dirtyRef.current) void persist()
+    }
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') saveIfDirty()
+    }
+    window.addEventListener('pagehide', saveIfDirty)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      window.removeEventListener('pagehide', saveIfDirty)
+      document.removeEventListener('visibilitychange', onVisibility)
+      saveIfDirty()
+    }
+  }, [persist])
 
   async function startWith(item: TopicItem) {
     if (!profile) return
@@ -133,26 +231,34 @@ export function PracticePage() {
       language,
     })
     navigate(`/practice/${type}/${created.id}`, { replace: true })
-    await load(created)
   }
 
   async function goNext() {
-    if (!session) return
-    if (session.step === 'feedback' && !feedback.trim() && !later) {
+    const current = stateRef.current.session
+    if (!current) return
+    if (current.step === 'feedback' && !feedback.trim() && !later) {
       setNotice('피드백을 적거나 ‘나중에 쓰기’를 눌러 주세요.')
       return
     }
-    if (session.step === 'revise') {
+    if (current.step === 'revise') {
       const applied = clean || applyMarks(draft, marks)
-      await upsertDocument({ session, role: 'clean', version, text: applied })
+      await upsertDocument({ session: current, role: 'clean', version, text: applied })
     }
-    const next = nextStep(session.type, session.step)
-    const updated = await advanceStep(session, next)
+    await persist()
+    const latest = stateRef.current.session
+    if (!latest) return
+    const next = nextStep(latest.type, latest.step)
+    const updated = await advanceStep(latest, next)
     setSession(updated)
     if (next === 'done') {
       setNotice('세션을 저장했습니다.')
       navigate(`/archive/${updated.id}`)
     }
+  }
+
+  async function saveAndLeave() {
+    await persist()
+    navigate('/')
   }
 
   const writeDuration = type === 'argument' ? STEP_MS.writeArgument : STEP_MS.writeExplanation
@@ -404,7 +510,10 @@ export function PracticePage() {
             type="button"
             onClick={async () => {
               if (step === 'stance') {
-                const withStance = await touchSession(session, { stance: { side, reasons } })
+                await persist()
+                const latest = stateRef.current.session
+                if (!latest) return
+                const withStance = await touchSession(latest, { stance: { side, reasons } })
                 const next = nextStep(withStance.type, withStance.step)
                 const updated = await advanceStep(withStance, next)
                 setSession(updated)
@@ -416,9 +525,10 @@ export function PracticePage() {
             다음 단계로
           </button>
         )}
-        <Link className="btn ghost" to="/">
+        <button className="btn ghost" type="button" onClick={() => void saveAndLeave()}>
           나중에 이어쓰기
-        </Link>
+        </button>
+        {saveLabel && <span className="muted">{saveLabel}</span>}
       </div>
     </div>
   )

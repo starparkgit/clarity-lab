@@ -136,6 +136,11 @@ a { color: var(--accent); }
   border-radius: 12px;
   margin-bottom: 16px;
 }
+.notice.warn {
+  background: var(--warn-soft);
+  border-color: #e8c4b0;
+  color: var(--warn);
+}
 
 .stepper {
   display: flex;
