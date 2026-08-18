@@ -89,11 +89,7 @@ export function AuthPage() {
         <div className="notice">서버 키가 없습니다. 로컬만으로도 연습할 수 있습니다.</div>
       )}
       {error && <div className="notice warn">{error}</div>}
-      {notice && !error && (
-        <div className="notice" onClick={() => setNotice(null)}>
-          {notice}
-        </div>
-      )}
+      {notice && !error && <div className="notice">{notice}</div>}
       <input
         type="email"
         placeholder="이메일"

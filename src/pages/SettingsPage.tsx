@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { downloadJson, exportBackup, importBackup, type BackupFile } from '../lib/backup'
-import { resetRerollHistory } from '../lib/lottery'
 import { isOnline } from '../lib/network'
 import { flushSyncQueue } from '../lib/sync'
 import { refreshTopics } from '../lib/topics'
@@ -23,8 +22,15 @@ export function SettingsPage() {
   } = useApp()
   const navigate = useNavigate()
   const [busy, setBusy] = useState(false)
+  const [leaving, setLeaving] = useState(false)
 
   if (!profile) return null
+
+  async function handleSignOut(keepLocal: boolean) {
+    setLeaving(true)
+    await signOut(keepLocal)
+    navigate('/auth', { replace: true })
+  }
 
   return (
     <div className="stack" style={{ maxWidth: 640 }}>
@@ -38,7 +44,7 @@ export function SettingsPage() {
         <button
           className="btn primary"
           type="button"
-          disabled={!online || busy}
+          disabled={!online || busy || leaving}
           onClick={async () => {
             setBusy(true)
             const result = await refreshTopics()
@@ -58,6 +64,7 @@ export function SettingsPage() {
           min={16}
           max={24}
           value={profile.editorFontSize}
+          disabled={leaving}
           onChange={(e) => {
             const next = Number(e.target.value)
             document.documentElement.style.setProperty('--editor-size', `${next}px`)
@@ -71,6 +78,7 @@ export function SettingsPage() {
           <button
             className="btn"
             type="button"
+            disabled={leaving}
             onClick={async () => {
               const data = await exportBackup([profile.id])
               downloadJson(`clarity-lab-${profile.displayName}.json`, data)
@@ -84,6 +92,7 @@ export function SettingsPage() {
               type="file"
               accept="application/json"
               hidden
+              disabled={leaving}
               onChange={async (e) => {
                 const file = e.target.files?.[0]
                 if (!file) return
@@ -110,7 +119,7 @@ export function SettingsPage() {
         <button
           className="btn"
           type="button"
-          disabled={!online}
+          disabled={!online || !user || leaving}
           onClick={async () => {
             const result = await flushSyncQueue()
             setNotice(result.remaining === 0 ? '동기화했습니다.' : `남은 대기 ${result.remaining}건`)
@@ -119,40 +128,35 @@ export function SettingsPage() {
         >
           지금 동기화
         </button>
-        <button className="btn ghost" type="button" onClick={() => void resetRerollHistory(profile.id)}>
-          추첨 이력 지우기
-        </button>
+        {!user && !leaving && <p className="muted">로그인하면 이 기기와 서버를 맞출 수 있습니다.</p>}
       </section>
       <section className="card stack">
         <h3 style={{ margin: 0 }}>계정</h3>
         <p className="muted">
-          {user ? user.email : '로컬 프로필'}
+          {user?.email ?? (leaving ? '로그아웃 중…' : '로컬 프로필')}
           {!supabaseConfigured && ' · Supabase 미설정'}
         </p>
-        {user ? (
+        {(user || leaving) && (
           <div className="row">
             <button
               className="btn"
               type="button"
-              onClick={async () => {
-                await signOut(false)
-                navigate('/auth', { replace: true })
-              }}
+              disabled={leaving}
+              onClick={() => void handleSignOut(false)}
             >
               동기화 후 로그아웃
             </button>
             <button
               className="btn ghost"
               type="button"
-              onClick={async () => {
-                await signOut(true)
-                navigate('/auth', { replace: true })
-              }}
+              disabled={leaving}
+              onClick={() => void handleSignOut(true)}
             >
               로컬에 남기고 로그아웃
             </button>
           </div>
-        ) : (
+        )}
+        {!user && !leaving && (
           <button className="btn primary" type="button" onClick={() => navigate('/auth')}>
             로그인 / 가입
           </button>

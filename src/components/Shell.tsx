@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react'
 import { useEffect } from 'react'
-import { Link, NavLink } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { ProfileSwitcher } from './ProfileSwitcher'
 import { StatusChip } from './StatusChip'
 
 export function Shell({ children }: { children: ReactNode }) {
-  const { profile, chip, notice, setNotice } = useApp()
+  const { profile, chip, notice } = useApp()
   useEffect(() => {
     document.documentElement.style.setProperty(
       '--editor-size',
@@ -16,10 +16,10 @@ export function Shell({ children }: { children: ReactNode }) {
   return (
     <div className="app-shell">
       <header className="topbar">
-        <Link className="brand" to="/">
+        <div className="brand">
           <strong>명료 연습실</strong>
           <span>Clarity Lab</span>
-        </Link>
+        </div>
         <nav className="topbar-nav">
           <NavLink to="/" end className="btn ghost">
             글쓰기
@@ -37,11 +37,7 @@ export function Shell({ children }: { children: ReactNode }) {
           <StatusChip chip={chip} />
         </nav>
       </header>
-      {notice && (
-        <div className="notice" onClick={() => setNotice(null)}>
-          {notice}
-        </div>
-      )}
+      {notice && <div className="notice">{notice}</div>}
       {children}
     </div>
   )

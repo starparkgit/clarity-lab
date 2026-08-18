@@ -58,6 +58,7 @@ a { color: var(--accent); }
   gap: 10px;
   text-decoration: none;
   color: inherit;
+  cursor: default;
 }
 .brand strong {
   font-family: var(--font-serif);
