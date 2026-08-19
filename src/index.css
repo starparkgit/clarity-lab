@@ -375,7 +375,7 @@ input[type='text'], input[type='email'], input[type='password'] {
   pointer-events: none;
 }
 .proof-insert::after {
-  content: '∧';
+  content: '∨';
   position: absolute;
   left: 50%;
   bottom: 100%;
