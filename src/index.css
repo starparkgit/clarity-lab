@@ -329,7 +329,7 @@ input[type='text'], input[type='email'], input[type='password'] {
 }
 .proof-point {
   display: inline-block;
-  width: 0.62em;
+  width: 0;
   height: 1em;
   vertical-align: baseline;
 }
@@ -343,7 +343,7 @@ input[type='text'], input[type='email'], input[type='password'] {
   color: #c23b22;
   font-size: 0.8em;
   font-weight: 700;
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .proof-join {
@@ -366,49 +366,49 @@ input[type='text'], input[type='email'], input[type='password'] {
   content: attr(data-ins);
   position: absolute;
   left: 50%;
-  bottom: calc(100% + 0.55em);
+  bottom: calc(100% + 0.3em);
   transform: translateX(-50%);
   color: #c23b22;
   font-size: 0.82em;
   font-weight: 700;
   white-space: nowrap;
-  pointer-events: none;
+  pointer-events: auto;
 }
 .proof-insert::after {
   content: '∨';
   position: absolute;
   left: 50%;
-  bottom: 100%;
+  bottom: calc(100% - 0.25em);
   transform: translateX(-50%);
   color: #c23b22;
   font-weight: 700;
   line-height: 1;
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .proof-punct::before {
   content: '∧';
   position: absolute;
   left: 50%;
-  top: 0.22em;
+  top: 0.47em;
   transform: translateX(-50%);
   color: #c23b22;
   font-weight: 700;
   line-height: 1;
-  pointer-events: none;
+  pointer-events: auto;
 }
 .proof-punct::after {
   content: attr(data-ins);
   position: absolute;
   left: 50%;
-  top: 0.95em;
+  top: 1.2em;
   transform: translateX(-50%);
   color: #c23b22;
   font-size: 0.82em;
   font-weight: 700;
   white-space: nowrap;
   line-height: 1;
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .proof-replace {
@@ -455,13 +455,14 @@ input[type='text'], input[type='email'], input[type='password'] {
 .proof-break::after {
   content: '';
   position: absolute;
-  left: 0.12em;
+  left: 50%;
   top: 0.2em;
   width: 0.42em;
   height: 0.85em;
   border-left: 2px solid #c23b22;
   border-bottom: 2px solid #c23b22;
-  pointer-events: none;
+  transform: translateX(-50%);
+  pointer-events: auto;
 }
 
 .proof-join-line {
