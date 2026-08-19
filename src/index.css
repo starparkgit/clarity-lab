@@ -301,8 +301,8 @@ input[type='text'], input[type='email'], input[type='password'] {
 }
 .proof-surface, .proof-result {
   min-height: 320px;
-  line-height: 2.15;
-  padding-top: 1.8em;
+  line-height: 2.35;
+  padding-top: 2.2em;
   user-select: text;
 }
 .proof-wrap { position: relative; }
@@ -310,7 +310,7 @@ input[type='text'], input[type='email'], input[type='password'] {
   position: absolute;
   z-index: 1;
   margin: 0;
-  padding: 1.8em 18px 16px;
+  padding: 2.2em 18px 16px;
   pointer-events: none;
 }
 .proof-surface.has-tool { cursor: crosshair; }
@@ -362,7 +362,30 @@ input[type='text'], input[type='email'], input[type='password'] {
   pointer-events: none;
 }
 
-.proof-insert::before,
+.proof-insert::before {
+  content: attr(data-ins);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 0.55em);
+  transform: translateX(-50%);
+  color: #c23b22;
+  font-size: 0.82em;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.proof-insert::after {
+  content: '∨';
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  transform: translateX(-50%);
+  color: #c23b22;
+  font-weight: 700;
+  line-height: 1;
+  pointer-events: none;
+}
+
 .proof-punct::before {
   content: attr(data-ins);
   position: absolute;
@@ -375,7 +398,6 @@ input[type='text'], input[type='email'], input[type='password'] {
   white-space: nowrap;
   pointer-events: none;
 }
-.proof-insert::after,
 .proof-punct::after {
   content: '∧';
   position: absolute;
@@ -408,17 +430,6 @@ input[type='text'], input[type='email'], input[type='password'] {
   text-decoration: line-through;
   text-decoration-color: #c23b22;
   text-decoration-thickness: 2px;
-}
-.proof-delete::after {
-  content: '';
-  display: inline-block;
-  width: 0.42em;
-  height: 0.42em;
-  margin-left: 2px;
-  border: 2px solid #c23b22;
-  border-radius: 50%;
-  vertical-align: middle;
-  transform: translateY(-0.05em);
 }
 
 .proof-transpose {

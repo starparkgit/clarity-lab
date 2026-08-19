@@ -31,7 +31,7 @@ export const MARK_META: Record<
   },
   insert: {
     label: '넣음',
-    symbol: '∧',
+    symbol: '∨',
     hint: '넣을 위치를 클릭하세요.',
     className: 'proof-insert',
     needsText: true,
