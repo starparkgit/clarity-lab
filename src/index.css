@@ -387,25 +387,27 @@ input[type='text'], input[type='email'], input[type='password'] {
 }
 
 .proof-punct::before {
+  content: '∧';
+  position: absolute;
+  left: 50%;
+  top: 0.22em;
+  transform: translateX(-50%);
+  color: #c23b22;
+  font-weight: 700;
+  line-height: 1;
+  pointer-events: none;
+}
+.proof-punct::after {
   content: attr(data-ins);
   position: absolute;
   left: 50%;
-  bottom: calc(100% - 0.1em);
+  top: 0.95em;
   transform: translateX(-50%);
   color: #c23b22;
   font-size: 0.82em;
   font-weight: 700;
   white-space: nowrap;
-  pointer-events: none;
-}
-.proof-punct::after {
-  content: '∧';
-  position: absolute;
-  left: 50%;
-  top: 0.72em;
-  transform: translateX(-50%);
-  color: #c23b22;
-  font-weight: 700;
+  line-height: 1;
   pointer-events: none;
 }
 
