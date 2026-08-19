@@ -15,15 +15,15 @@ export const STANCE_SIDES = ['for', 'against', 'conditional'] as const
 export type StanceSide = (typeof STANCE_SIDES)[number]
 
 export const MARK_TYPES = [
-  'delete',
+  'space',
+  'join',
   'insert',
   'replace',
+  'punct',
+  'delete',
   'transpose',
-  'join',
-  'space',
   'break',
   'joinLine',
-  'note',
 ] as const
 export type MarkType = (typeof MARK_TYPES)[number]
 
@@ -89,8 +89,10 @@ export type Mark = {
   type: MarkType
   start: number
   end: number
+  /** Second range for 자리바꿈 (two drags). */
+  start2?: number
+  end2?: number
   replacement?: string
-  note?: string
   accepted: boolean
 }
 

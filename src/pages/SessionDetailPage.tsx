@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { MarkEditor } from '../components/MarkEditor'
 import { db } from '../lib/db'
-import { applyMarks } from '../lib/marks'
 import { typeLabel } from '../lib/sessions'
 import { formatKoreanDate, formatMmSs } from '../lib/time'
 import type { LocalDocument, LocalSession } from '../types'
@@ -63,11 +63,19 @@ export function SessionDetailPage() {
           <strong>
             {doc.role} · v{doc.version}
           </strong>
-          <div className="mark-surface" style={{ minHeight: 80 }}>
-            {doc.role === 'annotated' && doc.marks
-              ? applyMarks(doc.text, doc.marks)
-              : doc.text || '(비어 있음)'}
-          </div>
+          {doc.role === 'annotated' && doc.marks && doc.marks.length > 0 ? (
+            <MarkEditor
+              text={doc.text}
+              marks={doc.marks}
+              onChangeMarks={() => {}}
+              onChangeClean={() => {}}
+              readOnly
+            />
+          ) : (
+            <div className="mark-surface" style={{ minHeight: 80 }}>
+              {doc.text || '(비어 있음)'}
+            </div>
+          )}
         </article>
       ))}
     </div>

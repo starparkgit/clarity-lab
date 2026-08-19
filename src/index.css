@@ -45,6 +45,9 @@ a { color: var(--accent); }
   margin: 0 auto;
   padding: 20px 20px 64px;
 }
+.app-shell:has(.revise-root) {
+  max-width: 1180px;
+}
 
 .topbar {
   display: flex;
@@ -251,18 +254,227 @@ input[type='text'], input[type='email'], input[type='password'] {
   padding: 7px 10px;
   cursor: pointer;
   font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
+.mark-toolbar button.on {
+  background: var(--accent);
+  color: #f7fbff;
+  border-color: var(--accent);
+}
+.mark-symbol {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  color: #c23b22;
+}
+.mark-toolbar button.on .mark-symbol { color: #ffd7cf; }
 .mark-surface {
   white-space: pre-wrap;
   word-break: break-word;
   cursor: text;
 }
-.mark-delete { text-decoration: line-through; background: #f8d7d0; }
-.mark-insert { background: #dcefe3; }
-.mark-replace { background: #f7e3b0; }
-.mark-transpose { background: #e3d7f2; }
-.mark-join, .mark-space, .mark-break, .mark-join-line { background: #d9e7f4; }
-.mark-note { border-bottom: 2px dotted var(--accent); }
+
+.revise-hint { margin: 0; min-height: 1.4em; }
+.revise-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: stretch;
+}
+.revise-pane {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.revise-pane-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+.revise-pane-head h3 {
+  font-family: var(--font-serif);
+  margin: 0;
+  font-size: 18px;
+}
+.proof-surface, .proof-result {
+  min-height: 320px;
+  line-height: 2.15;
+  padding-top: 1.8em;
+  user-select: text;
+}
+.proof-wrap { position: relative; }
+.proof-empty {
+  position: absolute;
+  z-index: 1;
+  margin: 0;
+  padding: 1.8em 18px 16px;
+  pointer-events: none;
+}
+.proof-surface.has-tool { cursor: crosshair; }
+.proof-surface.is-readonly { cursor: default; }
+.revise-root.is-readonly .proof-surface,
+.revise-root.is-readonly .proof-result { min-height: 160px; }
+.proof-result { background: #f7fbf7; }
+
+.proof-point, .proof-range {
+  position: relative;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  cursor: pointer;
+}
+.proof-point {
+  display: inline-block;
+  width: 0.62em;
+  height: 1em;
+  vertical-align: baseline;
+}
+
+.proof-space::after {
+  content: '∨';
+  position: absolute;
+  left: 50%;
+  top: 0.7em;
+  transform: translateX(-50%);
+  color: #c23b22;
+  font-size: 0.8em;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.proof-join {
+  padding: 0 0.05em;
+}
+.proof-join::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -0.28em;
+  height: 0.5em;
+  border: 2px solid #c23b22;
+  border-bottom: 0;
+  border-radius: 12px 12px 0 0;
+  pointer-events: none;
+}
+
+.proof-insert::before,
+.proof-punct::before {
+  content: attr(data-ins);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% - 0.1em);
+  transform: translateX(-50%);
+  color: #c23b22;
+  font-size: 0.82em;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.proof-insert::after,
+.proof-punct::after {
+  content: '∧';
+  position: absolute;
+  left: 50%;
+  top: 0.72em;
+  transform: translateX(-50%);
+  color: #c23b22;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.proof-replace {
+  text-decoration: line-through;
+  text-decoration-color: #c23b22;
+  text-decoration-thickness: 2px;
+}
+.proof-replace::before {
+  content: attr(data-rep);
+  position: absolute;
+  left: 0;
+  bottom: calc(100% - 0.12em);
+  color: #c23b22;
+  font-size: 0.82em;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.proof-delete {
+  text-decoration: line-through;
+  text-decoration-color: #c23b22;
+  text-decoration-thickness: 2px;
+}
+.proof-delete::after {
+  content: '';
+  display: inline-block;
+  width: 0.42em;
+  height: 0.42em;
+  margin-left: 2px;
+  border: 2px solid #c23b22;
+  border-radius: 50%;
+  vertical-align: middle;
+  transform: translateY(-0.05em);
+}
+
+.proof-transpose {
+  background: rgba(194, 59, 34, 0.1);
+  box-shadow: inset 0 -2px 0 #c23b22;
+  padding: 0 0.12em;
+}
+.proof-transpose[data-swap='1']::before,
+.proof-transpose[data-swap='2']::before {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% - 0.15em);
+  color: #c23b22;
+  font-size: 0.75em;
+  font-weight: 700;
+  pointer-events: none;
+}
+.proof-transpose[data-swap='1']::before { content: '①∽'; }
+.proof-transpose[data-swap='2']::before { content: '②∽'; }
+
+.proof-break::after {
+  content: '';
+  position: absolute;
+  left: 0.12em;
+  top: 0.2em;
+  width: 0.42em;
+  height: 0.85em;
+  border-left: 2px solid #c23b22;
+  border-bottom: 2px solid #c23b22;
+  pointer-events: none;
+}
+
+.proof-join-line {
+  background: rgba(194, 59, 34, 0.08);
+}
+.proof-join-line::after {
+  content: '╰';
+  color: #c23b22;
+  font-weight: 700;
+  margin-left: 2px;
+}
+
+.punct-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+.punct-grid button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 6px;
+  min-width: 0;
+}
+.punct-grid strong { font-size: 20px; line-height: 1.1; }
 
 .popover {
   position: absolute;
@@ -307,4 +519,6 @@ input[type='text'], input[type='email'], input[type='password'] {
   .grid-3 { grid-template-columns: 1fr; }
   .topic-title { font-size: 22px; }
   .app-shell { padding: 14px 14px 48px; }
+  .revise-split { grid-template-columns: 1fr; }
+  .punct-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
